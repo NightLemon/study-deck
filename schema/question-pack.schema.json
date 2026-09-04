@@ -1,0 +1,155 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.invalid/qd-study/question-pack.schema.json",
+  "title": "QD Study Question Pack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "pack", "chapters", "questions"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "version", "locale", "questionCount", "license", "source"],
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 120, "pattern": "^[a-zA-Z0-9._-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$" },
+        "locale": { "const": "zh-CN" },
+        "questionCount": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "license": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scope", "redistribution"],
+          "properties": {
+            "scope": { "const": "private-personal-use" },
+            "redistribution": { "const": false },
+            "notice": { "type": "string", "maxLength": 1000 }
+          }
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["title", "documentVersion"],
+          "properties": {
+            "title": { "type": "string", "minLength": 1, "maxLength": 300 },
+            "documentVersion": { "type": "string", "minLength": 1, "maxLength": 80 }
+          }
+        }
+      }
+    },
+    "chapters": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/chapter" }
+    },
+    "questions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/question" }
+    }
+  },
+  "definitions": {
+    "contentFields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt", "interpretation", "knowledge", "answer", "extension"],
+      "properties": {
+        "prompt": { "type": "string", "minLength": 1 },
+        "interpretation": { "type": "string" },
+        "knowledge": { "type": "string" },
+        "answer": { "type": "string" },
+        "extension": { "type": "string" }
+      }
+    },
+    "contentPatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "prompt": { "type": "string", "minLength": 1 },
+        "interpretation": { "type": "string" },
+        "knowledge": { "type": "string" },
+        "answer": { "type": "string" },
+        "extension": { "type": "string" }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "order"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+        "title": { "type": "string", "minLength": 1 },
+        "order": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "chapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "order", "sections"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^\\d+$" },
+        "title": { "type": "string", "minLength": 1 },
+        "order": { "type": "integer", "minimum": 1 },
+        "sections": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/section" }
+        }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "url"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "format": "uri", "pattern": "^https://" }
+      }
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "chapterId", "sectionId", "order", "sourcePages", "original", "review"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "chapterId": { "type": "string", "pattern": "^\\d+$" },
+        "sectionId": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+        "order": { "type": "integer", "minimum": 1 },
+        "sourcePages": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": [
+            { "type": "integer", "minimum": 1 },
+            { "type": "integer", "minimum": 1 }
+          ],
+          "additionalItems": false
+        },
+        "original": { "$ref": "#/definitions/contentFields" },
+        "revision": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fields": { "$ref": "#/definitions/contentPatch" },
+            "quickAnswer": { "type": "string" },
+            "pitfalls": { "type": "string" },
+            "followUps": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "references": { "type": "array", "items": { "$ref": "#/definitions/reference" } }
+          }
+        },
+        "review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "properties": {
+            "status": { "enum": ["raw", "reviewed", "verified"] },
+            "notes": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "updatedAt": { "type": "string", "format": "date-time" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+playwright-report/
+test-results/
+dist-debug/
+.vite/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.local
+*.log
