@@ -68,7 +68,6 @@ export const PackManagerPage = () => {
     <div className="page-width packs-page">
       <div className="page-title">
         <div><span className="eyebrow">QUESTION PACKS</span><h1>题库管理</h1></div>
-        <p>题库通过本地文件进入浏览器，不会上传到服务器。</p>
       </div>
 
       {notice && <div role="status" className={`notice ${notice.kind}`}>{notice.text}</div>}
@@ -83,7 +82,7 @@ export const PackManagerPage = () => {
         >
           <span className="drop-icon">↓</span>
           <h2>导入单文件 JSON 题库</h2>
-          <p>支持 QD Pack Schema v1，文件上限 25 MB。导入前会完整校验，失败不会改变现有数据。</p>
+          <p>支持题库格式 v1，文件上限 25 MB。导入前会完整校验，失败不会改变现有数据。</p>
           <div className="row-actions">
             <button className="button primary" disabled={busy} onClick={() => fileInput.current?.click()}>
               {busy ? "正在处理…" : "选择题库文件"}
@@ -99,10 +98,9 @@ export const PackManagerPage = () => {
           />
         </div>
 
-        <aside className="privacy-card">
-          <span className="lock-mark">◆</span>
-          <h2>本地优先</h2>
-          <p>应用没有账号、分析脚本或题库上传接口。清除站点数据前，请先导出学习进度。</p>
+        <aside className="progress-card">
+          <h2>学习进度</h2>
+          <p>导出或恢复收藏、掌握状态和复习记录。</p>
           <button className="text-button" onClick={() => void downloadProgressBackup()}>导出全部进度 →</button>
           <div className="backup-import">
             <select aria-label="进度导入模式" value={backupMode} onChange={(event) => setBackupMode(event.target.value as "merge" | "replace")}>

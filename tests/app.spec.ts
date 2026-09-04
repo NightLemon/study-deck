@@ -14,7 +14,7 @@ test("searches, filters, reveals answers and updates dashboard progress", async 
   await page.getByRole("link", { name: "学习", exact: true }).click();
 
   const firstQuestion = page.locator(".question-card").first();
-  await expect(firstQuestion).toContainText("为什么在优化低延迟路径前必须先定义延迟分位数？");
+  await expect(firstQuestion).toContainText("为什么只重复阅读通常不如主动回忆有效？");
   await page.screenshot({ path: testInfo.outputPath("study-initial.png"), fullPage: false });
   await firstQuestion.getByRole("button", { name: "查看提示" }).click();
   await expect(firstQuestion.getByRole("heading", { name: "题目解读" })).toBeVisible();
@@ -31,8 +31,8 @@ test("searches, filters, reveals answers and updates dashboard progress", async 
   await expect(page.locator(".question-card")).toHaveCount(1);
 
   await page.getByRole("button", { name: "只看收藏" }).click();
-  await page.getByLabel("搜索题库").fill("伪共享");
-  await expect(page.getByText("一个结构体刚好等于 64 字节，是否意味着它一定不会产生伪共享？")).toBeVisible();
+  await page.getByLabel("搜索题库").fill("间隔复习");
+  await expect(page.getByText("怎样安排间隔复习，才能兼顾记忆效果与时间成本？")).toBeVisible();
   await expect(page.locator(".question-card")).toHaveCount(1);
   await page.getByLabel("搜索题库").fill("");
   await page.getByLabel("按学习状态筛选").selectOption("review");
@@ -50,11 +50,11 @@ test("searches, filters, reveals answers and updates dashboard progress", async 
     const drawerBox = await curriculum.boundingBox();
     expect(drawerBox?.x).toBeGreaterThanOrEqual(0);
     await page.screenshot({ path: testInfo.outputPath("drawer-open.png"), fullPage: false });
-    await curriculum.getByRole("button", { name: /低延迟系统思维/ }).click();
+    await curriculum.getByRole("button", { name: /高效学习方法/ }).click();
     await expect(mobileMenu).toHaveAttribute("aria-expanded", "false");
     await mobileMenu.click();
     await expect(curriculum).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
-    await curriculum.getByRole("button", { name: /测量与权衡/ }).click();
+    await curriculum.getByRole("button", { name: /主动学习与复习/ }).click();
     await expect(mobileMenu).toHaveAttribute("aria-expanded", "false");
     await expect.poll(async () => (await curriculum.boundingBox())?.x ?? 0).toBeLessThan(0);
   } else {
@@ -95,7 +95,7 @@ test("rejects an invalid upgrade without changing the installed pack", async ({ 
 
   await page.getByRole("link", { name: "学习", exact: true }).click();
   await expect(page.locator(".question-card")).toHaveCount(3);
-  await expect(page.getByText("为什么在优化低延迟路径前必须先定义延迟分位数？")).toBeVisible();
+  await expect(page.getByText("为什么只重复阅读通常不如主动回忆有效？")).toBeVisible();
 });
 
 test("exports progress and restores it in replace mode", async ({ page, browserName }, testInfo) => {
@@ -109,7 +109,7 @@ test("exports progress and restores it in replace mode", async ({ page, browserN
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: /导出全部进度/ }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^qd-study-progress-\d{4}-\d{2}-\d{2}\.json$/);
+  expect(download.suggestedFilename()).toMatch(/^study-deck-progress-\d{4}-\d{2}-\d{2}\.json$/);
   const progressPath = testInfo.outputPath("progress.json");
   await download.saveAs(progressPath);
 

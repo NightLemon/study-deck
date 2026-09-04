@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Merge immutable chapter extracts with review overlays into one QD Pack."""
+"""Merge immutable chapter extracts with review overlays into one question pack."""
 
 from __future__ import annotations
 

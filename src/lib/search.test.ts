@@ -10,11 +10,11 @@ const question: StoredQuestion = {
   order: 1,
   sourcePages: [1, 1],
   original: {
-    prompt: "一个结构体刚好等于 64 字节，是否意味着它一定不会产生伪共享？",
-    interpretation: "考察布局。",
-    knowledge: "缓存行和对象对齐。",
-    answer: "对象起始地址也必须对齐。",
-    extension: "使用硬件计数器验证。"
+    prompt: "为什么只重复阅读通常不如主动回忆有效？",
+    interpretation: "考察熟悉感与真正掌握之间的区别。",
+    knowledge: "主动回忆和检索练习。",
+    answer: "主动回忆会暴露知识缺口。",
+    extension: "用自己的话复述并订正。"
   },
   review: { status: "raw" }
 };
@@ -22,7 +22,7 @@ const question: StoredQuestion = {
 describe("question search", () => {
   it("finds Chinese substrings in prompts and body text", () => {
     const search = createQuestionSearch([question]);
-    expect(search.search("伪共享").map((result) => result.id)).toContain("1.1.1");
-    expect(search.search("硬件计数器").map((result) => result.id)).toContain("1.1.1");
+    expect(search.search("主动回忆").map((result) => result.id)).toContain("1.1.1");
+    expect(search.search("复述").map((result) => result.id)).toContain("1.1.1");
   });
 });

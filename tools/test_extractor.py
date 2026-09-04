@@ -1,8 +1,8 @@
-from qdpack_extractor import TextLine, normalize_id, normalize_text, split_fields
+from pack_extractor import TextLine, normalize_id, normalize_text, split_fields
 
 
 def test_normalization() -> None:
-    assert normalize_text("⾼频  交易") == "高频 交易"
+    assert normalize_text("ＡＰＩ  设计") == "API 设计"
     assert normalize_id("2. 5. 6") == "2.5.6"
 
 

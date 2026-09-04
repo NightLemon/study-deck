@@ -27,9 +27,8 @@ export const DashboardPage = () => {
   if (!pack) {
     return (
       <section className="empty-state hero-empty">
-        <div className="eyebrow">LOCAL-FIRST · PRIVATE BY DESIGN</div>
         <h1>把复杂知识，变成每天可推进的一组题</h1>
-        <p>导入本地 JSON 题库后，搜索、收藏、学习状态和答案都只留在你的设备上。</p>
+        <p>导入 JSON 题库后，即可按章节学习、搜索、收藏和记录进度。</p>
         <Link className="button primary" to="/packs">导入第一个题库</Link>
       </section>
     );
@@ -41,7 +40,7 @@ export const DashboardPage = () => {
         <div>
           <div className="eyebrow">{pack.info.source.title} · {pack.info.version}</div>
           <h1>{pack.info.title}</h1>
-          <p>{pack.info.description ?? "以主动回忆的方式训练量化开发与高性能系统知识。"}</p>
+          <p>{pack.info.description ?? "以主动回忆的方式掌握知识并持续复习。"}</p>
           <div className="hero-actions">
             <Link className="button primary" to="/study">继续学习</Link>
             <Link className="button quiet" to="/packs">管理题库</Link>

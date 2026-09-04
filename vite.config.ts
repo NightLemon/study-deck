@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icon.svg", "sample-pack.json"],
       manifest: {
-        name: "量化开发自学平台",
-        short_name: "量化题库",
-        description: "离线优先的量化开发与高性能 C++ 自学平台",
+        name: "Study Deck",
+        short_name: "Study Deck",
+        description: "支持导入题库、渐进揭示答案与学习进度管理的自学平台",
         theme_color: "#0b1821",
         background_color: "#f5f0e7",
         display: "standalone",

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.invalid/qd-study/question-pack.schema.json",
-  "title": "QD Study Question Pack",
+  "$id": "https://example.invalid/study-deck/question-pack.schema.json",
+  "title": "Study Deck Question Pack",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "pack", "chapters", "questions"],

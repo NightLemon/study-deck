@@ -49,10 +49,10 @@ const Shell = () => {
       <div className="app-shell">
         <header className="topbar">
           <Link to="/" className="brand" aria-label="返回总览">
-            <span className="brand-mark" aria-hidden="true">Q</span>
+            <span className="brand-mark" aria-hidden="true">S</span>
             <span>
-              <strong>Quant Dev</strong>
-              <small>离线自学平台</small>
+              <strong>Study Deck</strong>
+              <small>可导入题库的自学平台</small>
             </span>
           </Link>
           <nav className="main-nav" aria-label="主导航">
@@ -82,10 +82,6 @@ const Shell = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
-        <footer className="footer">
-          <span>数据只保存在当前浏览器</span>
-          <span className="offline-dot"><i /> 支持离线使用</span>
-        </footer>
       </div>
     </AppContext.Provider>
   );

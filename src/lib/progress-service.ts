@@ -42,7 +42,7 @@ export const downloadProgressBackup = async () => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `qd-study-progress-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = `study-deck-progress-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   URL.revokeObjectURL(url);
 };

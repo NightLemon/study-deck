@@ -7,12 +7,12 @@ test("installs a local pack and keeps it available offline", async ({ page, cont
   await page.getByRole("button", { name: "安装合成示例" }).click();
   await expect(page.getByRole("status")).toContainText("已安装");
   await page.getByRole("link", { name: "学习", exact: true }).click();
-  await expect(page.getByText("为什么在优化低延迟路径前必须先定义延迟分位数？")).toBeVisible();
+  await expect(page.getByText("为什么只重复阅读通常不如主动回忆有效？")).toBeVisible();
   await page.getByRole("button", { name: "揭示答案" }).first().click();
   await expect(page.getByText("参考答案").first()).toBeVisible();
 
   await page.evaluate(() => navigator.serviceWorker.ready);
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByText("为什么在优化低延迟路径前必须先定义延迟分位数？")).toBeVisible();
+  await expect(page.getByText("为什么只重复阅读通常不如主动回忆有效？")).toBeVisible();
 });
