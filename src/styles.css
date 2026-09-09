@@ -147,7 +147,7 @@ h1, h2 { font-family: "Songti SC", "SimSun", serif; color: var(--ink); }
 .result-heading h1 { margin: 6px 0 0; }
 .result-heading > strong { color: var(--muted); font: 500 13px "DM Mono"; }
 .question-list { display: grid; gap: 18px; }
-.question-card { background: var(--paper); border: 1px solid var(--line); box-shadow: 0 8px 28px rgba(30,34,31,.035); padding: clamp(24px, 4vw, 42px); scroll-margin-top: 100px; }
+.question-card { min-width: 0; background: var(--paper); border: 1px solid var(--line); box-shadow: 0 8px 28px rgba(30,34,31,.035); padding: clamp(24px, 4vw, 42px); scroll-margin-top: 100px; }
 .question-meta { display: flex; align-items: center; gap: 9px; margin-bottom: 22px; }
 .question-id { color: var(--orange-dark); font: 500 13px "DM Mono", monospace; }
 .review-badge { font-size: 10px; padding: 4px 7px; border-radius: 20px; background: #eee9de; color: #716e67; }

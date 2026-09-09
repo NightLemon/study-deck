@@ -53,6 +53,22 @@ test("supports mixed sources, hides answers and resets reveal state across packs
   await expect(card.getByRole("button", { name: "待复习", exact: true })).toHaveClass(/active/);
 });
 
+test("long code scrolls inside the card without widening the page", async ({ page }) => {
+  const pack = await sample();
+  pack.pack.id = "synthetic.long-code";
+  pack.questions[0].original.answer = "```text\n" + "payload_".repeat(100) + "\n```";
+  await page.goto("/");
+  await upload(page, pack);
+  await page.getByRole("link", { name: "学习", exact: true }).click();
+  const card = page.locator(".question-card").first();
+  await card.getByRole("button", { name: "揭示答案" }).click();
+  const pre = card.locator("pre");
+  await expect(pre).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  expect(await pre.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
+  expect(await pre.evaluate(node => { node.scrollLeft = 100; return node.scrollLeft; })).toBeGreaterThan(0);
+});
+
 // Full private content is read from explicit local paths; never committed to this repository.
 const externalPaths: string[] = process.env.STUDY_PACK_PATHS ? JSON.parse(process.env.STUDY_PACK_PATHS) : [];
 test("imports and exercises all explicitly supplied local packs", async ({ page }, testInfo) => {
