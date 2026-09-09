@@ -21,20 +21,22 @@ export const useApp = () => {
 
 const Shell = () => {
   const location = useLocation();
-  const packs = useLiveQuery(() => db.packs.orderBy("installedAt").toArray(), []) ?? [];
+  const loadedPacks = useLiveQuery(() => db.packs.orderBy("installedAt").toArray(), []);
+  const packs = loadedPacks ?? [];
   const [activePackId, setActivePackIdState] = useState<string | null>(() => localStorage.getItem("qd-active-pack"));
 
   useEffect(() => {
-    if (packs.length === 0) {
-      setActivePackIdState(null);
-      localStorage.removeItem("qd-active-pack");
-      return;
-    }
-    if (!activePackId || !packs.some((pack) => pack.id === activePackId)) {
-      setActivePackIdState(packs[0].id);
-      localStorage.setItem("qd-active-pack", packs[0].id);
-    }
-  }, [activePackId, packs]);
+    if (!loadedPacks) return;
+    // Reconcile only when the database list changes. A just-imported selection
+    // can arrive before liveQuery includes its pack; an older list must not undo it.
+    setActivePackIdState(current => {
+      const next = current && loadedPacks.some(pack => pack.id === current)
+        ? current : loadedPacks[0]?.id ?? null;
+      if (next) localStorage.setItem("qd-active-pack", next);
+      else localStorage.removeItem("qd-active-pack");
+      return next;
+    });
+  }, [loadedPacks]);
 
   const setActivePackId = (packId: string | null) => {
     setActivePackIdState(packId);

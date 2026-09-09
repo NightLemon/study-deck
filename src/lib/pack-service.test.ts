@@ -46,6 +46,30 @@ describe("question pack", () => {
     expect(() => parsePackText(JSON.stringify(pack))).toThrow("重复题号");
   });
 
+  it("accepts authored questions and mixed packs without inventing PDF pages", async () => {
+    const pack = makePack();
+    const authored = { ...structuredClone(pack.questions[0]), id: "1.1.2", order: 2 };
+    delete authored.sourcePages;
+    pack.questions.push(authored);
+    pack.pack.questionCount = 2;
+    const parsed = parsePackText(JSON.stringify(pack));
+    await installPack(parsed);
+    expect((await db.questions.get([pack.pack.id, "1.1.2"]))?.sourcePages).toBeUndefined();
+    expect(parsed.questions[0].sourcePages).toEqual([1, 2]);
+    await db.userStates.put({ packId: pack.pack.id, questionId: "1.1.2", favorite: true, status: "review", updatedAt: "2026-09-09T00:00:00Z" });
+    parsed.pack.version = "1.0.1";
+    await installPack(parsed);
+    expect(await db.userStates.get([pack.pack.id, "1.1.2"])).toMatchObject({ favorite: true, status: "review" });
+  });
+
+  it.each([null, [], [1], [1, 2, 3], [0, 1], [-1, 2], [1.5, 2], ["1", 2], [2, 1], {}].map(pages => ({ pages })))(
+    "rejects explicitly invalid source pages: $pages", ({ pages }) => {
+      const pack = makePack();
+      const candidate = { ...pack, questions: [{ ...pack.questions[0], sourcePages: pages }] };
+      expect(() => parsePackText(JSON.stringify(candidate))).toThrow();
+    }
+  );
+
   it("preserves user state during a pack upgrade", async () => {
     const pack = makePack();
     await installPack(pack);

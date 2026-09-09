@@ -57,7 +57,7 @@ const assertSemanticIntegrity = (pack: QuestionPack) => {
     if (!question.id.startsWith(`${question.sectionId}.`)) {
       throw new Error(`题目 ${question.id} 与声明的小节 ${question.sectionId} 不匹配`);
     }
-    if (question.sourcePages[0] > question.sourcePages[1]) {
+    if (question.sourcePages && question.sourcePages[0] > question.sourcePages[1]) {
       throw new Error(`题目 ${question.id} 的来源页码倒置`);
     }
     for (const reference of question.revision?.references ?? []) {

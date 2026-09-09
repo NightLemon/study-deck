@@ -32,7 +32,7 @@ export interface Question {
   chapterId: string;
   sectionId: string;
   order: number;
-  sourcePages: [number, number];
+  sourcePages?: [number, number];
   original: ContentFields;
   revision?: {
     fields?: Partial<ContentFields>;

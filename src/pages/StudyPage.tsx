@@ -33,7 +33,7 @@ const QuestionCard = ({
       <div className="question-meta">
         <span className="question-id">{question.id}</span>
         <span className={`review-badge ${question.review.status}`}>{reviewLabels[question.review.status]}</span>
-        <span className="source-page">PDF {question.sourcePages[0]}-{question.sourcePages[1]} 页</span>
+        {question.sourcePages && <span className="source-page">PDF {question.sourcePages[0]}-{question.sourcePages[1]} 页</span>}
         <button
           className={`favorite ${favorite ? "on" : ""}`}
           aria-label={favorite ? "取消收藏" : "收藏题目"}
@@ -91,11 +91,11 @@ const QuestionCard = ({
       {(question.revision || question.review.notes?.length) && (
         <div className="original-row">
           <button className="text-button" onClick={() => setShowOriginal((value) => !value)}>
-            {showOriginal ? "收起原文对照" : "查看 PDF 原文与修订说明"}
+            {showOriginal ? "收起原文对照" : question.sourcePages ? "查看 PDF 原文与修订说明" : "查看原始内容与来源说明"}
           </button>
           {showOriginal && (
             <div className="original-panel">
-              <h4>规范化后的 PDF 原文</h4>
+              <h4>{question.sourcePages ? "规范化后的 PDF 原文" : "原始内容与来源说明"}</h4>
               <MarkdownContent>{question.original.prompt}</MarkdownContent>
               <details><summary>题目解读</summary><MarkdownContent>{question.original.interpretation}</MarkdownContent></details>
               <details><summary>知识点</summary><MarkdownContent>{question.original.knowledge}</MarkdownContent></details>
@@ -219,7 +219,7 @@ export const StudyPage = () => {
         <div className="question-list">
           {filteredQuestions.slice(0, limit).map((question) => (
             <QuestionCard
-              key={question.id}
+              key={`${question.packId}/${question.id}`}
               question={question}
               state={stateMap.get(question.id)}
               onChange={async (patch) => { await updateUserState(question.packId, question.id, patch); }}

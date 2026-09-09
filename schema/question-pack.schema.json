@@ -111,7 +111,7 @@
     "question": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "chapterId", "sectionId", "order", "sourcePages", "original", "review"],
+      "required": ["id", "chapterId", "sectionId", "order", "original", "review"],
       "properties": {
         "id": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
         "chapterId": { "type": "string", "pattern": "^\\d+$" },
