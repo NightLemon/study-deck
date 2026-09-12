@@ -28,6 +28,7 @@ export interface QuestionReference {
 }
 
 export interface Question {
+  // Stable across directory moves; do not derive chapter/section from this ID.
   id: string;
   chapterId: string;
   sectionId: string;

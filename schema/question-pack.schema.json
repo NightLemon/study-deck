@@ -115,7 +115,7 @@
       "properties": {
         "id": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
         "chapterId": { "type": "string", "pattern": "^\\d+$" },
-        "sectionId": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+        "sectionId": { "type": "string", "pattern": "^\\d+\\.\\d+$", "description": "Current directory section; independent of the stable question ID prefix." },
         "order": { "type": "integer", "minimum": 1 },
         "sourcePages": {
           "type": "array",

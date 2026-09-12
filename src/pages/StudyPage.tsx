@@ -184,7 +184,12 @@ export const StudyPage = () => {
         {pack.chapters.map((chapter) => (
           <details key={chapter.id} open={chapterFilter === chapter.id}>
             <summary>
-              <button className={chapterFilter === chapter.id && sectionFilter === "all" ? "active" : ""} onClick={() => selectChapter(chapter.id)}>
+              <button className={chapterFilter === chapter.id && sectionFilter === "all" ? "active" : ""} onClick={(event) => {
+                // Navigation controls `open`; the summary's default toggle can
+                // otherwise close the chapter immediately after it is selected.
+                event.preventDefault();
+                selectChapter(chapter.id);
+              }}>
                 <span>{chapter.id.padStart(2, "0")}</span>{chapter.title}
               </button>
             </summary>

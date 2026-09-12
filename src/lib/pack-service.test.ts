@@ -117,13 +117,43 @@ describe("question pack", () => {
     expect(await db.userStates.where("packId").equals("second.pack").count()).toBe(0);
   });
 
-  it("rejects duplicate hierarchy ids and mismatched question ids", () => {
+  it("rejects duplicate hierarchy ids and invalid directory references", () => {
     const duplicate = makePack();
     duplicate.chapters.push(structuredClone(duplicate.chapters[0]));
     expect(() => parsePackText(JSON.stringify(duplicate))).toThrow("重复章节 ID");
 
     const mismatched = makePack();
-    mismatched.questions[0].id = "1.2.1";
-    expect(() => parsePackText(JSON.stringify(mismatched))).toThrow("声明的小节");
+    mismatched.questions[0].sectionId = "1.2";
+    expect(() => parsePackText(JSON.stringify(mismatched))).toThrow("不存在的小节");
+
+    const wrongChapter = makePack();
+    wrongChapter.chapters.push({ id: "2", title: "另一章", order: 2, sections: [{ id: "2.1", title: "另一节", order: 1 }] });
+    wrongChapter.questions[0].sectionId = "2.1";
+    expect(() => parsePackText(JSON.stringify(wrongChapter))).toThrow("章节与小节不匹配");
+
+    const missingChapter = makePack();
+    missingChapter.questions[0].chapterId = "2";
+    expect(() => parsePackText(JSON.stringify(missingChapter))).toThrow("不存在的章节");
+  });
+
+  it("uses declared directory membership independently of stable question ids", () => {
+    const pack = makePack();
+    pack.chapters[0].sections.push({ id: "1.2", title: "进阶题", order: 2 });
+    pack.questions[0].sectionId = "1.2";
+    expect(parsePackText(JSON.stringify(pack)).questions[0]).toMatchObject({ id: "1.1.1", sectionId: "1.2" });
+  });
+
+  it("keeps viewing history, favorites and status when an upgrade moves a question", async () => {
+    const pack = makePack();
+    await installPack(parsePackText(JSON.stringify(pack)));
+    const state = { packId: pack.pack.id, questionId: "1.1.1", favorite: true, status: "review" as const, lastViewedAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z" };
+    await db.userStates.put(state);
+    pack.pack.version = "1.1.0";
+    pack.chapters = [{ id: "2", title: "新目录", order: 1, sections: [{ id: "2.3", title: "进阶题", order: 1 }] }];
+    pack.questions[0].chapterId = "2";
+    pack.questions[0].sectionId = "2.3";
+    await installPack(parsePackText(JSON.stringify(pack)));
+    expect(await db.userStates.get([pack.pack.id, "1.1.1"])).toEqual(state);
+    expect(await db.questions.get([pack.pack.id, "1.1.1"])).toMatchObject({ id: "1.1.1", chapterId: "2", sectionId: "2.3" });
   });
 });
