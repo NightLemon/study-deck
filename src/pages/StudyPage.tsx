@@ -161,13 +161,16 @@ export const StudyPage = () => {
     return <section className="empty-state"><h1>先导入一个题库</h1><p>学习页需要本地题库数据。</p><Link className="button primary" to="/packs">前往题库管理</Link></section>;
   }
 
+  const scrollToQuestionContent = () => window.scrollTo({ top: 0, behavior: "auto" });
   const selectChapter = (chapterId: string) => {
     setParams(chapterId === "all" ? {} : { chapter: chapterId });
     setCurriculumOpen(false);
+    scrollToQuestionContent();
   };
   const selectSection = (chapterId: string, sectionId: string) => {
     setParams({ chapter: chapterId, section: sectionId });
     setCurriculumOpen(false);
+    scrollToQuestionContent();
   };
 
   return (

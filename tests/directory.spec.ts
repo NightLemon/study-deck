@@ -76,3 +76,24 @@ test("directory difficulty selection composes with search and progress after reg
   await chooseDirectory(page, /^全部题目$/);
   await expect(page.locator(".question-card")).toHaveCount(4);
 });
+
+test("directory selection returns the question content to the top", async ({ page }) => {
+  await page.goto("/");
+  const pack = makePack();
+  for (let index = pack.questions.length + 1; index <= 12; index += 1) {
+    pack.questions.push({
+      ...structuredClone(pack.questions[0]),
+      id: `1.1.${index}`,
+      order: index,
+      original: { ...pack.questions[0].original, prompt: `目录滚动测试题 ${index}` }
+    });
+  }
+  pack.pack.questionCount = pack.questions.length;
+  await upload(page, pack);
+
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+  await chooseDirectory(page, /缓存与队列/);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+});
