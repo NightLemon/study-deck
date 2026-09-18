@@ -90,6 +90,7 @@ test("directory selection returns the question content to the top", async ({ pag
   }
   pack.pack.questionCount = pack.questions.length;
   await upload(page, pack);
+  await expect(page.locator(".question-card")).toHaveCount(pack.questions.length);
 
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
