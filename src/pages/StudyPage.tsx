@@ -3,6 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Link, useSearchParams } from "react-router-dom";
 import { useApp } from "../App";
 import { MarkdownContent } from "../components/MarkdownContent";
+import { QuestionLearningPanel } from "../components/QuestionLearningPanel";
 import { db } from "../lib/db";
 import { updateUserState } from "../lib/progress-service";
 import { createQuestionSearch } from "../lib/search";
@@ -24,6 +25,7 @@ const QuestionCard = ({
   const [showAnswer, setShowAnswer] = useState(false);
   const [showExtension, setShowExtension] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [assistanceUsed, setAssistanceUsed] = useState(false);
   const content = resolveContent(question);
   const favorite = state?.favorite ?? false;
   const status = state?.status ?? "new";
@@ -33,7 +35,9 @@ const QuestionCard = ({
       <div className="question-meta">
         <span className="question-id">{question.id}</span>
         <span className={`review-badge ${question.review.status}`}>{reviewLabels[question.review.status]}</span>
-        <span className="source-page">PDF {question.sourcePages[0]}-{question.sourcePages[1]} 页</span>
+        {question.sourcePages && (
+          <span className="source-page">PDF {question.sourcePages[0]}-{question.sourcePages[1]} 页</span>
+        )}
         <button
           className={`favorite ${favorite ? "on" : ""}`}
           aria-label={favorite ? "取消收藏" : "收藏题目"}
@@ -43,15 +47,19 @@ const QuestionCard = ({
       </div>
       <MarkdownContent>{content.prompt}</MarkdownContent>
 
+      <QuestionLearningPanel question={question} assistanceUsed={assistanceUsed} onBeginAttempt={() => {
+        setShowHint(false); setShowAnswer(false); setShowExtension(false); setShowOriginal(false); setAssistanceUsed(false);
+      }} />
+
       <div className="recall-actions">
-        <button className={showHint ? "active" : ""} onClick={() => setShowHint((value) => !value)}>
-          <span>01</span>{showHint ? "收起提示" : "查看提示"}
+        <button className={showHint ? "active" : ""} onClick={() => { setAssistanceUsed(true); setShowHint((value) => !value); }}>
+          <span aria-hidden="true">01</span>{showHint ? "收起提示" : "查看提示"}
         </button>
-        <button className={showAnswer ? "active" : ""} onClick={() => setShowAnswer((value) => !value)}>
-          <span>02</span>{showAnswer ? "收起答案" : "揭示答案"}
+        <button className={showAnswer ? "active" : ""} onClick={() => { setAssistanceUsed(true); setShowAnswer((value) => !value); }}>
+          <span aria-hidden="true">02</span>{showAnswer ? "收起答案" : "揭示答案"}
         </button>
-        <button className={showExtension ? "active" : ""} onClick={() => setShowExtension((value) => !value)}>
-          <span>03</span>{showExtension ? "收起拓展" : "拓展与追问"}
+        <button className={showExtension ? "active" : ""} onClick={() => { setAssistanceUsed(true); setShowExtension((value) => !value); }}>
+          <span aria-hidden="true">03</span>{showExtension ? "收起拓展" : "拓展与追问"}
         </button>
       </div>
 
@@ -90,16 +98,17 @@ const QuestionCard = ({
 
       {(question.revision || question.review.notes?.length) && (
         <div className="original-row">
-          <button className="text-button" onClick={() => setShowOriginal((value) => !value)}>
-            {showOriginal ? "收起原文对照" : "查看 PDF 原文与修订说明"}
+          <button className="text-button" onClick={() => { setAssistanceUsed(true); setShowOriginal((value) => !value); }}>
+            {showOriginal ? "收起原文对照" : question.sourcePages ? "查看 PDF 原文与修订说明" : "查看原始内容与修订说明"}
           </button>
           {showOriginal && (
             <div className="original-panel">
-              <h4>规范化后的 PDF 原文</h4>
+              <h4>{question.sourcePages ? "规范化后的 PDF 原文" : "原始学习内容"}</h4>
               <MarkdownContent>{question.original.prompt}</MarkdownContent>
               <details><summary>题目解读</summary><MarkdownContent>{question.original.interpretation}</MarkdownContent></details>
               <details><summary>知识点</summary><MarkdownContent>{question.original.knowledge}</MarkdownContent></details>
               <details><summary>答案</summary><MarkdownContent>{question.original.answer}</MarkdownContent></details>
+              <details><summary>拓展思考</summary><MarkdownContent>{question.original.extension || (question.sourcePages ? "源 PDF 未提供拓展内容。" : "原始内容未提供拓展。")}</MarkdownContent></details>
               {question.review.notes?.length ? <ul>{question.review.notes.map((note) => <li key={note}>{note}</li>)}</ul> : null}
             </div>
           )}
@@ -121,16 +130,18 @@ const QuestionCard = ({
 };
 
 export const StudyPage = () => {
-  const { activePackId } = useApp();
+  const { activePackId, setActivePackId } = useApp();
   const [params, setParams] = useSearchParams();
-  const pack = useLiveQuery(() => activePackId ? db.packs.get(activePackId) : undefined, [activePackId]);
+  const selectedPackId = params.get("pack") ?? activePackId;
+  const questionFilter = params.get("question");
+  const pack = useLiveQuery(() => selectedPackId ? db.packs.get(selectedPackId) : undefined, [selectedPackId]);
   const questions = useLiveQuery(
-    () => activePackId ? db.questions.where("packId").equals(activePackId).sortBy("order") : [],
-    [activePackId]
+    () => selectedPackId ? db.questions.where("packId").equals(selectedPackId).sortBy("order") : [],
+    [selectedPackId]
   ) ?? [];
   const states = useLiveQuery(
-    () => activePackId ? db.userStates.where("packId").equals(activePackId).toArray() : [],
-    [activePackId]
+    () => selectedPackId ? db.userStates.where("packId").equals(selectedPackId).toArray() : [],
+    [selectedPackId]
   ) ?? [];
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | LearningStatus>("all");
@@ -142,12 +153,17 @@ export const StudyPage = () => {
   const stateMap = useMemo(() => new Map(states.map((state) => [state.questionId, state])), [states]);
   const search = useMemo(() => createQuestionSearch(questions), [questions]);
 
+  useEffect(() => {
+    if (params.get("pack") && pack && activePackId !== pack.id) setActivePackId(pack.id);
+  }, [params, pack, activePackId, setActivePackId]);
+
   useEffect(() => setLimit(30), [query, statusFilter, favoritesOnly, chapterFilter, sectionFilter]);
 
   const filteredQuestions = useMemo(() => {
     const matchingIds = query.trim() ? new Set(search.search(query.trim()).map((result) => String(result.id))) : null;
     return questions.filter((question) => {
       const state = stateMap.get(question.id);
+      if (questionFilter && question.id !== questionFilter) return false;
       if (matchingIds && !matchingIds.has(question.id)) return false;
       if (chapterFilter !== "all" && question.chapterId !== chapterFilter) return false;
       if (sectionFilter !== "all" && question.sectionId !== sectionFilter) return false;
@@ -155,18 +171,18 @@ export const StudyPage = () => {
       if (statusFilter !== "all" && (state?.status ?? "new") !== statusFilter) return false;
       return true;
     });
-  }, [chapterFilter, favoritesOnly, query, questions, search, sectionFilter, stateMap, statusFilter]);
+  }, [chapterFilter, favoritesOnly, query, questions, search, sectionFilter, stateMap, statusFilter, questionFilter]);
 
   if (!pack) {
-    return <section className="empty-state"><h1>先导入一个题库</h1><p>学习页需要本地题库数据。</p><Link className="button primary" to="/packs">前往题库管理</Link></section>;
+    return <section className="empty-state"><h1>{params.get("pack") ? "指定题库尚未安装" : "先导入一个题库"}</h1><p>{params.get("pack") ? "不会用其他题库的同题号替代。请导入对应题库后继续。" : "学习页需要本地题库数据。"}</p><Link className="button primary" to="/packs">前往题库管理</Link></section>;
   }
 
   const selectChapter = (chapterId: string) => {
-    setParams(chapterId === "all" ? {} : { chapter: chapterId });
+    setParams({ pack: pack.id, ...(chapterId === "all" ? {} : { chapter: chapterId }) });
     setCurriculumOpen(false);
   };
   const selectSection = (chapterId: string, sectionId: string) => {
-    setParams({ chapter: chapterId, section: sectionId });
+    setParams({ pack: pack.id, chapter: chapterId, section: sectionId });
     setCurriculumOpen(false);
   };
 
@@ -215,11 +231,12 @@ export const StudyPage = () => {
         </section>
 
         <div className="result-heading"><div><span className="eyebrow">ACTIVE RECALL</span><h1>{query ? `搜索“${query}”` : "主动回忆"}</h1></div><strong>{filteredQuestions.length} 道题</strong></div>
+        {questionFilter && <p>正在查看指定题目：{questionFilter}。<button className="text-button" onClick={() => setParams({ pack: pack.id })}>返回本题库全部题目</button></p>}
 
         <div className="question-list">
           {filteredQuestions.slice(0, limit).map((question) => (
             <QuestionCard
-              key={question.id}
+              key={JSON.stringify([question.packId, question.id])}
               question={question}
               state={stateMap.get(question.id)}
               onChange={async (patch) => { await updateUserState(question.packId, question.id, patch); }}

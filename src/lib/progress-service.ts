@@ -1,8 +1,7 @@
 import { db } from "./db";
-import type { LearningStatus, ProgressBackup, UserState } from "./types";
-
-const isLearningStatus = (value: unknown): value is LearningStatus =>
-  value === "new" || value === "review" || value === "mastered";
+import { validateBackup } from "./backup-validation";
+import { schedulesFromAttempts } from "./learning-service";
+import type { ProgressBackup, UserState } from "./types";
 
 export const getUserState = async (packId: string, questionId: string): Promise<UserState> =>
   (await db.userStates.get([packId, questionId])) ?? {
@@ -30,11 +29,17 @@ export const updateUserState = async (
   return next;
 };
 
-export const createProgressBackup = async (): Promise<ProgressBackup> => ({
-  schemaVersion: 1,
+const personalTables = () => [db.userStates, db.studyCollections, db.collectionMembers, db.recallAttempts, db.reviewSchedules];
+
+export const createProgressBackup = async (): Promise<ProgressBackup> => db.transaction("r", personalTables(), async () => ({
+  schemaVersion: 2,
   exportedAt: new Date().toISOString(),
-  states: await db.userStates.toArray()
-});
+  states: await db.userStates.toArray(),
+  collections: await db.studyCollections.toArray(),
+  members: await db.collectionMembers.toArray(),
+  attempts: await db.recallAttempts.toArray(),
+  schedules: await db.reviewSchedules.toArray()
+}));
 
 export const downloadProgressBackup = async () => {
   const backup = await createProgressBackup();
@@ -48,6 +53,8 @@ export const downloadProgressBackup = async () => {
 };
 
 export const importProgressBackup = async (text: string, mode: "merge" | "replace" = "merge") => {
+  if (mode !== "merge" && mode !== "replace") throw new Error("进度导入模式无效");
+  if (new TextEncoder().encode(text).length > 25 * 1024 * 1024) throw new Error("进度备份超过 25 MB 限制");
   let data: unknown;
   try {
     data = JSON.parse(text);
@@ -55,34 +62,43 @@ export const importProgressBackup = async (text: string, mode: "merge" | "replac
     throw new Error("进度备份不是有效的 JSON");
   }
 
-  const backup = data as Partial<ProgressBackup>;
-  if (backup.schemaVersion !== 1 || !Array.isArray(backup.states)) {
-    throw new Error("不支持的进度备份格式");
-  }
-
-  const states = backup.states.map((state) => {
-    if (
-      !state ||
-      typeof state.packId !== "string" ||
-      typeof state.questionId !== "string" ||
-      typeof state.favorite !== "boolean" ||
-      !isLearningStatus(state.status) ||
-      typeof state.updatedAt !== "string"
-    ) {
-      throw new Error("进度备份包含无效记录");
+  const backup = validateBackup(data);
+  await db.transaction("rw", personalTables(), async () => {
+    if (mode === "replace") {
+      // A v1 backup has no new tables: replacing it replaces legacy state only.
+      if (backup.schemaVersion === 1) await db.userStates.clear();
+      else for (const table of personalTables()) await table.clear();
     }
-    return state;
-  });
-
-  await db.transaction("rw", db.userStates, async () => {
-    if (mode === "replace") await db.userStates.clear();
-    for (const incoming of states) {
+    for (const incoming of backup.states) {
       const existing = await db.userStates.get([incoming.packId, incoming.questionId]);
-      if (mode === "replace" || !existing || incoming.updatedAt > existing.updatedAt) {
+      if (mode === "replace" || !existing || Date.parse(incoming.updatedAt) > Date.parse(existing.updatedAt)) {
         await db.userStates.put(incoming);
       }
     }
+    if (backup.schemaVersion === 2) {
+      for (const incoming of backup.collections) {
+        const existing = await db.studyCollections.get(incoming.id);
+        if (!existing || Date.parse(incoming.updatedAt) > Date.parse(existing.updatedAt)) await db.studyCollections.put(incoming);
+      }
+      const collections = await db.studyCollections.toArray();
+      if (new Set(collections.map((item) => item.name.toLowerCase())).size !== collections.length) throw new Error("备份与本地存在不同标识的同名集合，请检查备份并保留需要的数据后再导入");
+      for (const incoming of backup.members) {
+        if (!await db.collectionMembers.get([incoming.collectionId, incoming.packId, incoming.questionId])) await db.collectionMembers.add(incoming);
+      }
+      for (const incoming of backup.attempts) {
+        const existing = await db.recallAttempts.get(incoming.id);
+        if (existing && (Object.keys(incoming) as (keyof typeof incoming)[]).some((key) => incoming[key] !== existing[key])) {
+          throw new Error("同一尝试标识对应了不同内容，已取消导入");
+        }
+        if (!existing) await db.recallAttempts.add(incoming);
+      }
+      // Merge histories first, then derive schedules; an older backup cannot overwrite
+      // a newer attempt's due date, and identical question IDs stay pack-scoped.
+      const mergedSchedules = schedulesFromAttempts(await db.recallAttempts.toArray());
+      await db.reviewSchedules.clear();
+      await db.reviewSchedules.bulkPut(mergedSchedules);
+    }
   });
 
-  return states.length;
+  return backup.states.length + (backup.schemaVersion === 2 ? backup.collections.length + backup.members.length + backup.attempts.length + backup.schedules.length : 0);
 };

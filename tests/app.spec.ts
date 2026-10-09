@@ -9,6 +9,36 @@ const installSample = async (page: Page) => {
   await expect(page.getByRole("status")).toContainText("已安装");
 };
 
+test("long code stays inside the question card at narrow widths", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/#/packs");
+  const pack = JSON.parse(await readFile(resolve(process.cwd(), "public", "sample-pack.json"), "utf8"));
+  const code = '```cpp\n// A deliberately long source line\nstatic_assert(sizeof(Example) <= 64, "A message that must scroll inside the code block and keep its characters");\n```';
+  pack.questions[0].original.answer = code;
+  pack.questions[0].original.knowledge = code;
+  delete pack.questions[0].revision;
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name: "long-code.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(pack))
+  });
+  await expect(page.getByRole("status")).toContainText("已安装");
+  await page.getByRole("link", { name: "学习", exact: true }).click();
+  const card = page.locator(".question-card").first();
+  await card.getByRole("button", { name: "查看提示" }).click();
+  await card.getByRole("button", { name: "揭示答案" }).click();
+  await expect(card.locator("pre")).toHaveCount(2);
+  const sizes = await card.evaluate((element) => ({
+    cardWidth: element.getBoundingClientRect().width,
+    documentWidth: document.documentElement.scrollWidth,
+    viewport: innerWidth,
+    blocks: [...element.querySelectorAll("pre")].map((pre) => ({
+      clientWidth: pre.clientWidth, scrollWidth: pre.scrollWidth, overflow: getComputedStyle(pre).overflowX
+    }))
+  }));
+  expect(sizes.cardWidth).toBeLessThanOrEqual(sizes.viewport);
+  expect(sizes.documentWidth).toBeLessThanOrEqual(sizes.viewport);
+  expect(sizes.blocks.every((block) => block.scrollWidth > block.clientWidth && block.overflow === "auto")).toBe(true);
+});
+
 test("searches, filters, reveals answers and updates dashboard progress", async ({ page }, testInfo) => {
   await installSample(page);
   await page.getByRole("link", { name: "学习", exact: true }).click();
@@ -24,6 +54,11 @@ test("searches, filters, reveals answers and updates dashboard progress", async 
   await expect(firstQuestion.getByRole("heading", { name: "拓展思考" })).toBeVisible();
   await firstQuestion.getByRole("button", { name: "查看 PDF 原文与修订说明" }).click();
   await expect(firstQuestion.getByRole("heading", { name: "规范化后的 PDF 原文" })).toBeVisible();
+  const originalExtension = firstQuestion.locator(".original-panel details").filter({ hasText: "拓展思考" });
+  await originalExtension.locator("summary").click();
+  await expect(originalExtension.locator(".markdown-content")).toBeVisible();
+  const sample = JSON.parse(await readFile(resolve(process.cwd(), "public", "sample-pack.json"), "utf8"));
+  await expect(originalExtension.locator(".markdown-content")).toHaveText(sample.questions[0].original.extension);
 
   await firstQuestion.getByRole("button", { name: "收藏题目" }).click();
   await firstQuestion.getByRole("button", { name: "待复习" }).click();

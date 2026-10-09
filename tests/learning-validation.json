@@ -1,0 +1,127 @@
+{
+  "status": "implemented_awaiting_independent_review",
+  "recorded_at": "2026-09-15T14:34:21.965552+00:00",
+  "write_set": "src, tests, README only; preserved pre-existing uncommitted changes; no Travel edits",
+  "implementation": [
+    "Local collections reference packId + questionId without copying content",
+    "Self-assessed recall attempts, hint latch, mistake reason and plain-text evidence",
+    "1/3/7/14 calendar-day schedules in independent tables",
+    "Dexie v2 to v3 additive migration; pack schemaVersion remains 1",
+    "Legacy and v2 personal backups, strict row/date/duplicate/relation checks, transaction rollback and merged-history schedule derivation",
+    "Orphan personal state retained through uninstall and temporarily removed question IDs; explicit true purge scoped to one pack",
+    "Question links carry both pack and question IDs; no fallback to another pack"
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec tsc --noEmit",
+      "result": "pass",
+      "stage": "initial UI and data layer"
+    },
+    {
+      "command": "pnpm test",
+      "result": "pass",
+      "passed": 39,
+      "skipped": 1,
+      "stage": "first implementation"
+    },
+    {
+      "command": "pnpm build",
+      "result": "pass",
+      "stage": "first standalone production build",
+      "observations": [
+        "Vite reported a chunk larger than 500 kB; no bundle-size optimization claimed"
+      ]
+    },
+    {
+      "command": "pnpm exec playwright test tests/learning.spec.ts --project=chromium --project=mobile-webkit --workers=1",
+      "result": "failed",
+      "passed": 3,
+      "failed": 2,
+      "skipped": 1,
+      "finding": "Exact accessible name for self-assessment select included option text",
+      "repair": "Added explicit aria-label to the select"
+    },
+    {
+      "command": "pnpm test",
+      "result": "pass",
+      "passed": 40,
+      "skipped": 1,
+      "stage": "added backwards-clock and malformed-state guards"
+    },
+    {
+      "command": "pnpm exec playwright test tests/learning.spec.ts tests/authored-pack.spec.ts tests/app.spec.ts --project=chromium --project=mobile-webkit --workers=1",
+      "result": "failed",
+      "passed": 11,
+      "failed": 2,
+      "skipped": 5,
+      "finding": "Existing decorative 01 prefix was included in hint button accessible name; the select fix passed",
+      "repair": "Marked decorative 01/02/03 spans aria-hidden; kept business assertions"
+    },
+    {
+      "command": "pnpm test",
+      "result": "pass",
+      "passed": 40,
+      "skipped": 1,
+      "stage": "final code"
+    },
+    {
+      "command": "pnpm exec playwright test tests/learning.spec.ts tests/authored-pack.spec.ts tests/app.spec.ts --project=chromium --project=mobile-webkit --workers=1",
+      "result": "pass",
+      "passed": 13,
+      "skipped": 5,
+      "stage": "final code; webServer performs pnpm build before the browser tests",
+      "duration_reported": "1.0m"
+    },
+    {
+      "command": "git diff --check -- src tests README.md",
+      "result": "pass"
+    },
+    {
+      "command": "pnpm exec playwright test tests/app.spec.ts --project=mobile-webkit --workers=1 --grep \"searches, filters\"",
+      "result": "pass",
+      "passed": 1,
+      "stage": "CSS-only mobile navigation wrap fix; includes fresh production build",
+      "duration_reported": "39.9s"
+    }
+  ],
+  "skipped_boundaries": [
+    "One unit integration case and two browser cases require INTERVIEW_PACK_PATH for the private full authored pack; not configured",
+    "Three mobile cases intentionally execute only on Chromium: invalid-upgrade duplication, old progress download, new progress download"
+  ],
+  "remaining_risks": [
+    "Independent GPT-6 Astra review pending",
+    "No private complete-pack integration run in this batch",
+    "No user mastery, automated grading, retention-effect or production-deployment claim",
+    "Local browser persistence only; merge is additive and has no deletion tombstones"
+  ],
+  "changed_artifacts_sha256": {
+    "src/lib/types.ts": "e9687fce44bd6c96b2eaeb6fa7b0f70350afc5b3fe95e6189c27d420cb704785",
+    "src/lib/db.ts": "ebf3b2d9bf55439e48a284869be4001438881c7eb5c65176e27b96c6878a40d4",
+    "src/lib/learning-service.ts": "0cf7ed8cc5109f1e8335f9bc707eb6dbeb9a2cb2039df537016eae749416f4e0",
+    "src/lib/backup-validation.ts": "8ab5a8619cef61b86f000afc33fb93ee57f2e662010989e09dfd951d3d6b616f",
+    "src/lib/progress-service.ts": "5d7f7e257dda4221bd520113e63754e2ac4e67826224ac3cdfd98401f2827cb6",
+    "src/lib/pack-service.ts": "c10718c9aa14d695ee57071cd3bf8180f12361dec0597d4319a938a3d8b3e334",
+    "src/lib/pack-service.test.ts": "e81d3c9eac6f5245490cacd75e655ae6ea981089d5fd3b29c818e5619cf05471",
+    "src/lib/learning-service.test.ts": "f502e7b0b4d8cbe4df3f32648efe51d48b2e607cfe2f8033097722430b76beb7",
+    "src/components/QuestionLearningPanel.tsx": "95c511852f71d2fc36ffd233c97a2a88b38343c1fc70c7b225bc0024f059cb37",
+    "src/pages/LearningPage.tsx": "99bc94bd3a5b613b9c91dabcdad54d9b9fd4595042acc324367e2db94c154248",
+    "src/App.tsx": "da1538f9642419615d764a861a81795b0091baad89082c92535cf22027c7ad3c",
+    "src/pages/StudyPage.tsx": "17f5f8eaecb0c9ee904c5836bd91dbcec0aa1f625031bb8a5c06f45fb6671c6b",
+    "src/pages/PackManagerPage.tsx": "06f52198a4063d34be12ba0f06e23671a16de3cd6348095606c184a5e919d37d",
+    "src/styles.css": "536a55c4f36028d6fda907ec2dee2df027eaa42719d90b83f9a0fd56b0b7b17a",
+    "tests/learning.spec.ts": "a9dc317dac4ada6beed08fb60c84f4d972e9cd741f4d5ee67da7d61c6c07f32e",
+    "README.md": "f6490ab464bbf49a2b7f7cdc479814e7ca397a95bd910e497f9562fe161e9097"
+  },
+  "existing_contract_dependencies_sha256": {
+    "schema/question-pack.schema.json": "7cca399f9588cb93d06370241cb0f88c6ed110e6352fc458e97b9404324150f2",
+    "package.json": "95ce7895b3294b1080266a5b410601ea0f607c2872c288e66711ea28badc7045",
+    "playwright.config.ts": "676b42555686cad76e9cac0e52100d51886b9661ee86edf26a7267aa4aa08bbd",
+    "vite.config.ts": "abfc3ccc4169c3e312ef97083cf2474607ed8fa5f080ea91b095e99b4f7c6428"
+  },
+  "visual_inspection": {
+    "finding": "The four-character mobile learning-records link wrapped to a second line with old navigation padding",
+    "repair": "Use 6px horizontal padding and nowrap on mobile navigation links",
+    "verified": "Final actual mobile screenshot shows one-line navigation; browser regression passed",
+    "screenshot": "test-results/app-searches-filters-revea-7cc94--updates-dashboard-progress-mobile-webkit/study-initial.png"
+  }
+}

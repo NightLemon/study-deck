@@ -105,13 +105,13 @@
       "required": ["title", "url"],
       "properties": {
         "title": { "type": "string", "minLength": 1 },
-        "url": { "type": "string", "format": "uri", "pattern": "^https://" }
+        "url": { "type": "string", "format": "uri", "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://[^/?#\\s]+" }
       }
     },
     "question": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "chapterId", "sectionId", "order", "sourcePages", "original", "review"],
+      "required": ["id", "chapterId", "sectionId", "order", "original", "review"],
       "properties": {
         "id": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
         "chapterId": { "type": "string", "pattern": "^\\d+$" },

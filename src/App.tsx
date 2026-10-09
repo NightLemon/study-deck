@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { HashRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { HashRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { db } from "./lib/db";
 import { DashboardPage } from "./pages/DashboardPage";
 import { PackManagerPage } from "./pages/PackManagerPage";
 import { StudyPage } from "./pages/StudyPage";
+import { LearningPage } from "./pages/LearningPage";
 
 interface AppContextValue {
   activePackId: string | null;
@@ -21,20 +22,30 @@ export const useApp = () => {
 
 const Shell = () => {
   const location = useLocation();
-  const packs = useLiveQuery(() => db.packs.orderBy("installedAt").toArray(), []) ?? [];
+  const navigate = useNavigate();
+  const loadedPacks = useLiveQuery(() => db.packs.orderBy("installedAt").toArray(), []);
+  const packs = loadedPacks ?? [];
   const [activePackId, setActivePackIdState] = useState<string | null>(() => localStorage.getItem("qd-active-pack"));
 
   useEffect(() => {
-    if (packs.length === 0) {
-      setActivePackIdState(null);
-      localStorage.removeItem("qd-active-pack");
-      return;
-    }
-    if (!activePackId || !packs.some((pack) => pack.id === activePackId)) {
-      setActivePackIdState(packs[0].id);
-      localStorage.setItem("qd-active-pack", packs[0].id);
-    }
-  }, [activePackId, packs]);
+    if (!loadedPacks) return;
+    let cancelled = false;
+    const reconcile = async () => {
+      if (activePackId) {
+        if (loadedPacks.some((pack) => pack.id === activePackId)) return;
+        // An import can finish before the live list refreshes. Check persisted
+        // data before replacing an explicitly selected, newly installed pack.
+        if (await db.packs.get(activePackId)) return;
+      }
+      if (cancelled) return;
+      const nextId = loadedPacks[0]?.id ?? null;
+      setActivePackIdState(nextId);
+      if (nextId) localStorage.setItem("qd-active-pack", nextId);
+      else localStorage.removeItem("qd-active-pack");
+    };
+    void reconcile();
+    return () => { cancelled = true; };
+  }, [activePackId, loadedPacks]);
 
   const setActivePackId = (packId: string | null) => {
     setActivePackIdState(packId);
@@ -58,6 +69,7 @@ const Shell = () => {
           <nav className="main-nav" aria-label="主导航">
             <Link className={location.pathname === "/" ? "active" : ""} to="/">总览</Link>
             <Link className={location.pathname.startsWith("/study") ? "active" : ""} to="/study">学习</Link>
+            <Link className={location.pathname.startsWith("/learning") ? "active" : ""} to="/learning">学习记录</Link>
             <Link className={location.pathname.startsWith("/packs") ? "active" : ""} to="/packs">题库</Link>
           </nav>
           <label className="pack-switcher">
@@ -65,7 +77,10 @@ const Shell = () => {
             <select
               aria-label="切换当前题库"
               value={activePackId ?? ""}
-              onChange={(event) => setActivePackId(event.target.value || null)}
+              onChange={(event) => {
+                setActivePackId(event.target.value || null);
+                if (location.pathname === "/study") navigate("/study");
+              }}
             >
               {packs.length === 0 && <option value="">尚未导入</option>}
               {packs.map((pack) => (
@@ -78,6 +93,7 @@ const Shell = () => {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/study" element={<StudyPage />} />
+            <Route path="/learning" element={<LearningPage />} />
             <Route path="/packs" element={<PackManagerPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

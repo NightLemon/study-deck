@@ -2,6 +2,7 @@ import Ajv, { type ErrorObject } from "ajv";
 import addFormats from "ajv-formats";
 import questionPackSchema from "../../schema/question-pack.schema.json";
 import { db } from "./db";
+import { isHttpReferenceUrl } from "./reference-url";
 import type { QuestionPack, StoredQuestion } from "./types";
 
 export const MAX_PACK_BYTES = 25 * 1024 * 1024;
@@ -57,12 +58,13 @@ const assertSemanticIntegrity = (pack: QuestionPack) => {
     if (!question.id.startsWith(`${question.sectionId}.`)) {
       throw new Error(`题目 ${question.id} 与声明的小节 ${question.sectionId} 不匹配`);
     }
-    if (question.sourcePages[0] > question.sourcePages[1]) {
+    if (question.sourcePages && question.sourcePages[0] > question.sourcePages[1]) {
       throw new Error(`题目 ${question.id} 的来源页码倒置`);
     }
     for (const reference of question.revision?.references ?? []) {
-      const url = new URL(reference.url);
-      if (url.protocol !== "https:") throw new Error(`题目 ${question.id} 含非 HTTPS 参考链接`);
+      if (!isHttpReferenceUrl(reference.url)) {
+        throw new Error(`题目 ${question.id} 含无效的 HTTP/HTTPS 参考链接`);
+      }
     }
   }
 };
@@ -95,17 +97,12 @@ export const installPack = async (pack: QuestionPack) => {
     packId: pack.pack.id
   }));
 
-  const incomingQuestionIds = new Set(pack.questions.map((question) => question.id));
-
   await db.transaction("rw", db.packs, db.questions, db.userStates, async () => {
     const existing = await db.packs.get(pack.pack.id);
     await db.questions.where("packId").equals(pack.pack.id).delete();
     await db.questions.bulkPut(storedQuestions);
-    const existingStates = await db.userStates.where("packId").equals(pack.pack.id).toArray();
-    const removedQuestionKeys = existingStates
-      .filter((state) => !incomingQuestionIds.has(state.questionId))
-      .map((state) => [state.packId, state.questionId] as [string, string]);
-    if (removedQuestionKeys.length > 0) await db.userStates.bulkDelete(removedQuestionKeys);
+    // Personal records can precede installation or refer to an older pack version.
+    // Keep their stable compound IDs so reinstalling that question restores them.
     await db.packs.put({
       id: pack.pack.id,
       info: pack.pack,
@@ -117,9 +114,14 @@ export const installPack = async (pack: QuestionPack) => {
 };
 
 export const removePack = async (packId: string, removeProgress = false) => {
-  await db.transaction("rw", db.packs, db.questions, db.userStates, async () => {
+  await db.transaction("rw", [db.packs, db.questions, db.userStates, db.collectionMembers, db.recallAttempts, db.reviewSchedules], async () => {
     await db.packs.delete(packId);
     await db.questions.where("packId").equals(packId).delete();
-    if (removeProgress) await db.userStates.where("packId").equals(packId).delete();
+    if (removeProgress === true) {
+      await db.userStates.where("packId").equals(packId).delete();
+      await db.collectionMembers.where("packId").equals(packId).delete();
+      await db.recallAttempts.where("packId").equals(packId).delete();
+      await db.reviewSchedules.where("packId").equals(packId).delete();
+    }
   });
 };

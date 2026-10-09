@@ -32,7 +32,8 @@ export interface Question {
   chapterId: string;
   sectionId: string;
   order: number;
-  sourcePages: [number, number];
+  /** Present only when the question has a PDF page locator. */
+  sourcePages?: [number, number];
   original: ContentFields;
   revision?: {
     fields?: Partial<ContentFields>;
@@ -95,10 +96,58 @@ export interface UserState {
   lastViewedAt?: string;
 }
 
-export interface ProgressBackup {
+export interface LegacyProgressBackup {
   schemaVersion: 1;
   exportedAt: string;
   states: UserState[];
+}
+
+export interface StudyCollection {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CollectionMember {
+  collectionId: string;
+  packId: string;
+  questionId: string;
+  addedAt: string;
+}
+
+export interface RecallAttempt {
+  id: string;
+  packId: string;
+  questionId: string;
+  answer: string;
+  usedHint: boolean;
+  selfAssessment: "correct" | "incorrect";
+  mistakeReason: string;
+  evidence: string;
+  attemptedAt: string;
+  /** Local calendar date at the time of the attempt, stable across backup time zones. */
+  attemptedOn: string;
+}
+
+export interface ReviewSchedule {
+  packId: string;
+  questionId: string;
+  independentStreak: number;
+  intervalDays: 1 | 3 | 7 | 14;
+  dueOn: string;
+  lastAttemptId: string;
+  updatedAt: string;
+}
+
+export interface ProgressBackup {
+  schemaVersion: 2;
+  exportedAt: string;
+  states: UserState[];
+  collections: StudyCollection[];
+  members: CollectionMember[];
+  attempts: RecallAttempt[];
+  schedules: ReviewSchedule[];
 }
 
 export const resolveContent = (question: Question): ContentFields => ({

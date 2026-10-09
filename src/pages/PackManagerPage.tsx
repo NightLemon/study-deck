@@ -100,7 +100,8 @@ export const PackManagerPage = () => {
 
         <aside className="progress-card">
           <h2>学习进度</h2>
-          <p>导出或恢复收藏、掌握状态和复习记录。</p>
+          <p>备份收藏、掌握标记、目标集合、闭卷尝试及复习日期。自评记录不代表已验证掌握。</p>
+          <small>导入旧版备份时，“完全覆盖”只覆盖原有收藏和状态；新版备份会覆盖全部个人记录。题库内容不会被覆盖。</small>
           <button className="text-button" onClick={() => void downloadProgressBackup()}>导出全部进度 →</button>
           <div className="backup-import">
             <select aria-label="进度导入模式" value={backupMode} onChange={(event) => setBackupMode(event.target.value as "merge" | "replace")}>

@@ -46,6 +46,60 @@ describe("question pack", () => {
     expect(() => parsePackText(JSON.stringify(pack))).toThrow("重复题号");
   });
 
+  it("imports authored questions without PDF pages and preserves progress on upgrade", async () => {
+    const pack = makePack();
+    delete pack.questions[0].sourcePages;
+    pack.questions[0].revision = {
+      references: [{ title: "原题：LeetCode 1 · Two Sum", url: "https://leetcode.com/problems/two-sum/" }]
+    };
+    await installPack(parsePackText(JSON.stringify(pack)));
+    await db.userStates.put({ packId: pack.pack.id, questionId: "1.1.1", favorite: true, status: "review", updatedAt: "2026-09-08T00:00:00Z" });
+    pack.pack.version = "1.0.1";
+    pack.questions[0].original.answer = "修订后的答案";
+    await installPack(parsePackText(JSON.stringify(pack)));
+    expect((await db.questions.get([pack.pack.id, "1.1.1"]))?.sourcePages).toBeUndefined();
+    expect(await db.userStates.get([pack.pack.id, "1.1.1"])).toMatchObject({ favorite: true, status: "review" });
+  });
+
+  it.each([null, [], [1], [1, 2, 3], [0, 1], [1.5, 2], [3, 2]])("rejects invalid supplied PDF pages: %j", (pages) => {
+    const pack = makePack();
+    const candidate = { ...pack, questions: [{ ...pack.questions[0], sourcePages: pages }] };
+    expect(() => parsePackText(JSON.stringify(candidate))).toThrow();
+  });
+
+  it.each([
+    "http://joschu.net/blog/kl-approx.html",
+    "https://example.com/reference?q=KL#approximation",
+    "HTTP://example.com:80/reference", "HTTPS://example.com:443/reference",
+    "http://127.0.0.1:0/reference", "https://[::1]:65535/reference",
+    "https://example.com/path%20with%20spaces", "http://user%40name:p%40ss@example.com/a%25b",
+    "http://user%40name@[::1]:8080/source"
+  ])("accepts absolute HTTP/HTTPS references without rewriting them: %s", (url) => {
+    const pack = makePack();
+    delete pack.questions[0].sourcePages;
+    pack.questions[0].revision = { references: [{ title: "真实来源", url }] };
+    expect(parsePackText(JSON.stringify(pack))).toEqual(pack);
+  });
+
+  it.each([
+    "javascript:alert(1)", "data:text/html,test", "file:///tmp/source", "ftp://example.com/source",
+    "//example.com/source", "/source", "#source", "http://", "https://",
+    "http:///source", "https:example.com", "https:/example.com", "https://?query", "https://#fragment",
+    "http://example.com:65536/source", "https://example.com:-1/source", "http://example.com:abc/source",
+    "http://[invalid]/source", "http://[::1/source", "https://exa mple.com/source",
+    " http://example.com", "https://example.com ", "http://example.com/a b",
+    "http://exa\tmple.com", "https://example.com/a\nb", "https://example.com/a\u00a0b",
+    "https://example.com/a\u0000b", "https://example.com\\source",
+    "http://example.com/%zz", "http://example.com/%", "http://example.com/%2",
+    "http://user@@example.com/a", "http://user:pass@@example.com/a", "http://%5b::1%5d/a",
+    "http://example.com/a\u0085b"
+  ])("rejects unsafe or malformed references on authored questions: %j", (url) => {
+    const pack = makePack();
+    delete pack.questions[0].sourcePages;
+    pack.questions[0].revision = { references: [{ title: "无效来源", url }] };
+    expect(() => parsePackText(JSON.stringify(pack))).toThrow();
+  });
+
   it("preserves user state during a pack upgrade", async () => {
     const pack = makePack();
     await installPack(pack);
@@ -69,14 +123,14 @@ describe("question pack", () => {
     expect((await db.questions.get(["test.pack", "1.1.1"]))?.original.prompt).toBe("问题");
   });
 
-  it("keeps only states whose stable question ids survive an upgrade", async () => {
+  it("preserves orphan states when a question temporarily disappears in an upgrade", async () => {
     const pack = makePack();
     await installPack(pack);
     await db.userStates.put({ packId: "test.pack", questionId: "1.1.1", favorite: true, status: "review", updatedAt: "2026-01-01T00:00:00Z" });
     pack.pack.version = "2.0.0";
     pack.questions[0] = { ...pack.questions[0], id: "1.1.2", order: 2 };
     await installPack(pack);
-    expect(await db.userStates.get(["test.pack", "1.1.1"])).toBeUndefined();
+    expect(await db.userStates.get(["test.pack", "1.1.1"])).toMatchObject({ favorite: true, status: "review" });
   });
 
   it("isolates questions and progress belonging to different packs", async () => {
